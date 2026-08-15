@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
+    <title>EB居眠り防止タイマー</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #1e3a8a; transition: background-color 0.3s;
+        }
+        #app {
+            width: 100%; height: 100%; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: white; text-align: center;
+        }
+        #status { font-size: 24px; font-weight: 500; margin-bottom: 20px; }
+        #timer { font-size: 140px; font-weight: 900; font-family: monospace; line-height: 1; }
+        #hint { font-size: 18px; opacity: 0.7; margin-top: 40px; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="status">生存確認中</div>
+    <div id="timer">60</div>
+    <div id="hint">画面をタップしてスタート / リセット</div>
+</div>
+
+<script>
+const MAX_TIME = 60;
+let timeRemaining = MAX_TIME;
+let timerId = null;
+let alertId = null;
+let wakeLock = null;
+
+const app = document.getElementById('app');
+const timerText = document.getElementById('timer');
+const statusText = document.getElementById('status');
+
+// Web Audio APIの準備
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function initAudio() {
+    if (!audioCtx) audioCtx = new AudioContext();
+}
+
+// 電子音を鳴らす関数
+function playTone(freq, duration) {
+    initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    
+    setTimeout(() => {
+        osc.stop();
+    }, duration);
+}
+
+// iPhoneが自動スリープするのを防ぐ機能
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+        }
+    } catch (err) {
+        console.log("WakeLock failed", err);
+    }
+}
+
+function startTimer() {
+    // 初期化
+    clearInterval(timerId);
+    clearInterval(alertId);
+    timeRemaining = MAX_TIME;
+    
+    document.body.style.backgroundColor = '#1e3a8a'; // 青
+    statusText.innerText = '生存確認中';
+    timerText.innerText = timeRemaining;
+    
+    requestWakeLock();
+
+    timerId = setInterval(() => {
+        if (timeRemaining > 0) {
+            timeRemaining--;
+            timerText.innerText = timeRemaining;
+
+            // 残り10秒・5秒の警告ブザー
+            if (timeRemaining === 10 || timeRemaining === 5) {
+                document.body.style.backgroundColor = '#d97706'; // オレンジ
+                statusText.innerText = '警告：起きてください！';
+                playTone(880, 150); // 短いピ音
+            }
+        } else {
+            // 0秒：非常ブレーキ
+            clearInterval(timerId);
+            document.body.style.backgroundColor = '#dc2626'; // 赤
+            statusText.innerText = '⚠️ 非常ブレーキ作動 ⚠️';
+            
+            // タップされるまでサイレンを鳴らし続ける
+            alertId = setInterval(() => {
+                playTone(554.37, 250); // ウー
+                setTimeout(() => playTone(440, 250), 250); // ウー
+            }, 600);
+        }
+    }, 1000);
+}
+
+// 画面全体のタップイベント
+app.addEventListener('click', () => {
+    initAudio(); // iPhoneの音出し許可を取得
+    startTimer();
+});
+</script>
+
+</body>
+</html>
