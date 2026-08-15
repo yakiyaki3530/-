@@ -28,7 +28,7 @@
 <div id="app">
     <div id="status">画面をタップして開始</div>
     <div id="hint">集中を維持しましょう</div>
-    <div id="version">Ver 1.4 (カウントダウン非表示版)</div>
+    <div id="version">Ver 1.8 (5秒前ブザー0.5秒版)</div>
 </div>
 
 <script>
@@ -85,7 +85,7 @@ function startTimer() {
     clearInterval(alertId);
     timeRemaining = MAX_TIME;
     
-    document.body.style.backgroundColor = '#1e3a8a'; // 通常時は静かな青
+    document.body.style.backgroundColor = '#1e3a8a';
     statusText.innerText = '集中タイム';
     hintText.innerText = '集中が切れたら画面をタップしてリセット';
     
@@ -95,16 +95,21 @@ function startTimer() {
         if (timeRemaining > 0) {
             timeRemaining--;
 
-            // 残り10秒・5秒：低めのブザー音（ブッ）
-            if (timeRemaining === 10 || timeRemaining === 5) {
-                document.body.style.backgroundColor = '#d97706'; // オレンジに変色
+            // 残り10秒：画面の色（オレンジ）と文字だけ変更（音はなし）
+            if (timeRemaining === 10) {
+                document.body.style.backgroundColor = '#d97706'; 
                 statusText.innerText = '警告：集中が切れていませんか？';
-                playTone(220, 0.2, 'sawtooth'); 
             }
+            
+            // 残り5秒：警告音（ブッ）を0.5秒間鳴らす
+            if (timeRemaining === 5) {
+                playTone(220, 0.5, 'sawtooth'); // 0.2から0.5に変更
+            }
+            
         } else {
             // 0秒：非常ブレーキ（目覚まし時計のジリジリ音）
             clearInterval(timerId);
-            document.body.style.backgroundColor = '#dc2626'; // 赤に変色
+            document.body.style.backgroundColor = '#dc2626';
             statusText.innerText = '⚠️ タイムアウト ⚠️';
             hintText.innerText = 'タップして再開してください';
             
