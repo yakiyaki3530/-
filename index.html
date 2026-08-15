@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
-    <title>EB居眠り防止タイマー</title>
+    <title>EB勉強タイマー</title>
     <style>
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
@@ -15,10 +15,8 @@
             justify-content: center; align-items: center; color: white; text-align: center;
             position: relative;
         }
-        #status { font-size: 24px; font-weight: 500; margin-bottom: 20px; }
-        #timer { font-size: 140px; font-weight: 900; font-family: monospace; line-height: 1; }
-        #hint { font-size: 18px; opacity: 0.7; margin-top: 40px; }
-        /* 【追加】バージョン表示のスタイル */
+        #status { font-size: 32px; font-weight: bold; margin-bottom: 20px; }
+        #hint { font-size: 18px; opacity: 0.7; }
         #version {
             position: absolute; bottom: 15px; right: 15px;
             font-size: 12px; opacity: 0.4; font-family: monospace;
@@ -28,11 +26,9 @@
 <body>
 
 <div id="app">
-    <div id="status">生存確認中</div>
-    <div id="timer">60</div>
-    <div id="hint">画面をタップしてスタート / リセット</div>
-    <!-- 【追加】右下にバージョンを表示 -->
-    <div id="version">Ver 1.1 (ジリジリ音版)</div>
+    <div id="status">画面をタップして開始</div>
+    <div id="hint">集中を維持しましょう</div>
+    <div id="version">Ver 1.4 (カウントダウン非表示版)</div>
 </div>
 
 <script>
@@ -43,20 +39,19 @@ let alertId = null;
 let wakeLock = null;
 
 const app = document.getElementById('app');
-const timerText = document.getElementById('timer');
 const statusText = document.getElementById('status');
+const hintText = document.getElementById('hint');
 
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 
 function initAudio() {
     if (!audioCtx) audioCtx = new AudioContext();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
 function playTone(freq, duration, type = 'sine') {
     initAudio();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     
@@ -90,28 +85,28 @@ function startTimer() {
     clearInterval(alertId);
     timeRemaining = MAX_TIME;
     
-    document.body.style.backgroundColor = '#1e3a8a';
-    statusText.innerText = '生存確認中';
-    timerText.innerText = timeRemaining;
+    document.body.style.backgroundColor = '#1e3a8a'; // 通常時は静かな青
+    statusText.innerText = '集中タイム';
+    hintText.innerText = '集中が切れたら画面をタップしてリセット';
     
     requestWakeLock();
 
     timerId = setInterval(() => {
         if (timeRemaining > 0) {
             timeRemaining--;
-            timerText.innerText = timeRemaining;
 
             // 残り10秒・5秒：低めのブザー音（ブッ）
             if (timeRemaining === 10 || timeRemaining === 5) {
-                document.body.style.backgroundColor = '#d97706';
-                statusText.innerText = '警告：起きてください！';
+                document.body.style.backgroundColor = '#d97706'; // オレンジに変色
+                statusText.innerText = '警告：集中が切れていませんか？';
                 playTone(220, 0.2, 'sawtooth'); 
             }
         } else {
             // 0秒：非常ブレーキ（目覚まし時計のジリジリ音）
             clearInterval(timerId);
-            document.body.style.backgroundColor = '#dc2626';
-            statusText.innerText = '⚠️ 非常ブレーキ作動 ⚠️';
+            document.body.style.backgroundColor = '#dc2626'; // 赤に変色
+            statusText.innerText = '⚠️ タイムアウト ⚠️';
+            hintText.innerText = 'タップして再開してください';
             
             alertId = setInterval(() => {
                 playTone(1200, 0.03, 'square');
