@@ -28,7 +28,7 @@
 <div id="app">
     <div id="status">画面をタップして開始</div>
     <div id="hint">集中を維持しましょう</div>
-    <div id="version">Ver 1.9 (0秒警報を低音焦燥化)</div>
+    <div id="version">Ver 2.1 (0秒ジリジリ＋低音リミックス版)</div>
 </div>
 
 <script>
@@ -107,17 +107,27 @@ function startTimer() {
             }
             
         } else {
-            // 0秒：タイムアウト（低音警報の高速連打）
+            // 0秒：タイムアウト（ジリジリ音と太い低音の同時超高速連打）
             clearInterval(timerId);
             document.body.style.backgroundColor = '#dc2626';
             statusText.innerText = '⚠️ タイムアウト ⚠️';
             hintText.innerText = 'タップして再開してください';
             
-            // 5秒前と同じ太い低音（220Hz / sawtooth）を
-            // 0.2秒鳴らして、0.1秒休む…を高速で繰り返す「警報音」
+            // カウントを刻むための変数
+            let tick = 0;
+            
+            // 0.05秒（50ミリ秒）ごとに超高速処理
             alertId = setInterval(() => {
-                playTone(220, 0.2, 'sawtooth');
-            }, 300);
+                // 【ジリジリ音】1200Hzの硬い金属音を常に50ミリ秒ごとに超連打
+                playTone(1200, 0.03, 'square');
+                
+                // 【びっくり低音】300ミリ秒（0.3秒）に1回のペースで重低音を重ねていく（ウー！ウー！）
+                if (tick % 6 === 0) {
+                    playTone(220, 0.2, 'sawtooth');
+                }
+                
+                tick++;
+            }, 50);
         }
     }, 1000);
 }
