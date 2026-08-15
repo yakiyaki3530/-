@@ -38,7 +38,6 @@ const app = document.getElementById('app');
 const timerText = document.getElementById('timer');
 const statusText = document.getElementById('status');
 
-// Web Audio APIの準備
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 
@@ -46,17 +45,20 @@ function initAudio() {
     if (!audioCtx) audioCtx = new AudioContext();
 }
 
-// 電子音を鳴らす関数
-function playTone(freq, duration) {
+// 音を生成する関数（音の波形を変更できるように改良）
+function playTone(freq, duration, type = 'sine') {
     initAudio();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     
-    osc.type = 'sine';
+    osc.type = type; // 'sawtooth' や 'square' でジリジリ感を出す
     osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+    
+    // 音の終わりのプチプチ雑音を防ぐ設定
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
     
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -64,10 +66,10 @@ function playTone(freq, duration) {
     
     setTimeout(() => {
         osc.stop();
-    }, duration);
+    }, duration * 1000);
 }
 
-// iPhoneが自動スリープするのを防ぐ機能
+// iPhoneの自動スリープ防止
 async function requestWakeLock() {
     try {
         if ('wakeLock' in navigator) {
@@ -79,7 +81,6 @@ async function requestWakeLock() {
 }
 
 function startTimer() {
-    // 初期化
     clearInterval(timerId);
     clearInterval(alertId);
     timeRemaining = MAX_TIME;
@@ -95,30 +96,29 @@ function startTimer() {
             timeRemaining--;
             timerText.innerText = timeRemaining;
 
-            // 残り10秒・5秒の警告ブザー
+            // 残り10秒・5秒：低めのブザー音（ブッ）
             if (timeRemaining === 10 || timeRemaining === 5) {
                 document.body.style.backgroundColor = '#d97706'; // オレンジ
                 statusText.innerText = '警告：起きてください！';
-                playTone(880, 150); // 短いピ音
+                // 鋸歯状波(sawtooth)の220Hzで、低く濁った「ブッ」という音
+                playTone(220, 0.2, 'sawtooth'); 
             }
         } else {
-            // 0秒：非常ブレーキ
+            // 0秒：非常ブレーキ（目覚まし時計のジリジリ音）
             clearInterval(timerId);
             document.body.style.backgroundColor = '#dc2626'; // 赤
             statusText.innerText = '⚠️ 非常ブレーキ作動 ⚠️';
             
-            // タップされるまでサイレンを鳴らし続ける
+            // 0.05秒（50ミリ秒）間隔で「ジリジリジリ！」と高速連打
             alertId = setInterval(() => {
-                playTone(554.37, 250); // ウー
-                setTimeout(() => playTone(440, 250), 250); // ウー
-            }, 600);
+                playTone(1200, 0.03, 'square'); // 高めの矩形波でベルの金属音を再現
+            }, 50);
         }
     }, 1000);
 }
 
-// 画面全体のタップイベント
 app.addEventListener('click', () => {
-    initAudio(); // iPhoneの音出し許可を取得
+    initAudio();
     startTimer();
 });
 </script>
